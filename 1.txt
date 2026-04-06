@@ -1,5 +1,27 @@
 TODO popuniti odgovorima na pitanja iz problema 1
 
-a) K-fold cross validation funkcioniše tako što se skup podataka podeli na k približno jednakih delova. Model se trenira k puta, pri čemu se svaki put jedan deo koristi za testiranje, a preostalih k-1 delova za treniranje. Na kraju se rezultati svih ponavljanja proseče. Prednost ove metode je što se svi podaci iskoriste i za trening i za validaciju, a rezultat je obično stabilan.
+a) Razlika između k-fold, leave-one-out i random subsampling cross validation algoritama
 
-b) Leave-one-out cross validation (LOOCV) je poseban slučaj k-fold metode gde je k jednak broju uzoraka. To znači da se model trenira onoliko puta koliko ima primera u skupu, pri čemu se svaki put samo jedan uzorak ostavlja za test, a svi ostali za trening. Ova metoda maksimalno koristi podatke za treniranje, ali je veoma spora za veće skupove podataka.
+Kod k-fold cross validation skup podataka se deli na k približno jednakih delova. Model se trenira k puta, tako da svaki deo jednom bude test skup, a ostalih k-1 delova trening skup. Na kraju se rezultat obično dobija kao prosek svih merenja.
+
+Leave-one-out cross validation (LOOCV) je poseban slučaj k-fold metode gde je broj foldova jednak broju uzoraka. To znači da se model trenira onoliko puta koliko ima primera, pri čemu se svaki put samo jedan primer koristi za testiranje, a svi ostali za treniranje. Ova metoda daje veoma detaljnu procenu, ali je računski najskuplja.
+
+Kod random subsampling (ili repeated holdout) podaci se više puta nasumično dele na trening i test skup, na primer 80% za trening i 20% za test. Za razliku od k-fold metode, isti primer može više puta završiti u test skupu, dok neki primeri možda nijednom ne budu testirani. Ova metoda je fleksibilna i jednostavna, ali je manje “uredna” od k-fold pristupa jer nema garancije da će svi uzorci biti ravnomerno iskorišćeni.
+
+b) Razlika između Gaussian, Multinomial i Bernoulli Naive Bayes metoda
+
+Sve tri metode pripadaju porodici Naive Bayes klasifikatora i zasnivaju se na Bayesovoj teoremi i pretpostavci da su atributi međusobno nezavisni. U beleškama sa vežbi je prikazana upravo Naive Bayes formulacija, kao i multinomijalna varijanta za broj pojavljivanja reči u dokumentu.
+
+Gaussian Naive Bayes se koristi kada su atributi kontinualne numeričke vrednosti, na primer visina, težina, temperatura ili dužina. Pretpostavlja se da vrednosti atributa unutar svake klase imaju približno normalnu (Gaussovu) raspodelu.
+
+Multinomial Naive Bayes se najčešće koristi za tekstualnu klasifikaciju, kada su atributi brojevi pojavljivanja reči, odnosno frekvencije termina u dokumentu. Dakle, ovde je važno koliko puta se neka reč pojavila. U beleškama je opisano da ova varijanta koristi BoW reprezentaciju i verovatnoće zasnovane na broju pojavljivanja reči u klasi.
+
+Bernoulli Naive Bayes je sličan multinomijalnom, ali ne posmatra broj ponavljanja reči, već samo da li se neka osobina pojavljuje ili ne pojavljuje. Drugim rečima, atributi su binarni: 0 ili 1. Zbog toga je pogodan kada je važna sama prisutnost neke reči, a ne njena učestalost.
+
+c) Pojam linearne separabilnosti i više od 2 klastera
+
+Linearna separabilnost znači da se klase mogu razdvojiti pomoću linearne granice, odnosno pravom u 2D prostoru, ravni u 3D prostoru ili hiperravni u višim dimenzijama. Ako postoji takva granica koja potpuno odvaja primere jedne klase od druge, kažemo da su podaci linearno separabilni.
+
+Kod problema sa dve klase, dovoljna je jedna takva granica. Međutim, kada imamo više od dve grupe ili klastera, podaci i dalje mogu biti linearno separabilni, ali obično nije dovoljna samo jedna prava ili ravan. Tada je potrebno više linearnih granica, odnosno više hiperravni, da bi se sve klase međusobno razdvojile.
+
+Dakle, da, podaci grupisani u više od 2 klastera mogu biti linearno separabilni, ali to zavisi od njihovog rasporeda u prostoru. Ako su klasteri lepo odvojeni, moguće ih je razdvojiti linearnim granicama. Ako su, na primer, raspoređeni u obliku koncentričnih krugova ili na neki složen nelinearan način, tada nisu linearno separabilni.
