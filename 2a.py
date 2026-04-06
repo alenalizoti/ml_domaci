@@ -108,7 +108,7 @@ for color, degree in zip(colors, degrees):
     with th.inference_mode():
         ys_normalized = model(th.tensor(xs, dtype=th.float32)).squeeze().numpy()
 
-    ys_original = ys_normalized * y_std + y_mean
+    ys_original = ys_normalized * y_std + y_mean #vratimo u orginalnu skalu pre crtanja
     curve_predictions[degree] = dict(color=color, y=ys_original)
 
     print(f"Stepen polinoma: {degree} | Finalni MSE na celom skupu: {final_loss:.5f}")
