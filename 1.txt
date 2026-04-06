@@ -1,1 +1,5 @@
 TODO popuniti odgovorima na pitanja iz problema 1
+
+a) K-fold cross validation funkcioniše tako što se skup podataka podeli na k približno jednakih delova. Model se trenira k puta, pri čemu se svaki put jedan deo koristi za testiranje, a preostalih k-1 delova za treniranje. Na kraju se rezultati svih ponavljanja proseče. Prednost ove metode je što se svi podaci iskoriste i za trening i za validaciju, a rezultat je obično stabilan.
+
+b) Leave-one-out cross validation (LOOCV) je poseban slučaj k-fold metode gde je k jednak broju uzoraka. To znači da se model trenira onoliko puta koliko ima primera u skupu, pri čemu se svaki put samo jedan uzorak ostavlja za test, a svi ostali za trening. Ova metoda maksimalno koristi podatke za treniranje, ali je veoma spora za veće skupove podataka.
