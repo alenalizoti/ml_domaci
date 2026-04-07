@@ -17,13 +17,15 @@ class KNN:
     def predict(self, query_data, batch_size=512):
         # novi podaci za koje hocemo predikciju
         Xq = th.tensor(query_data['x'], dtype=th.float32)
+        # skupljamo predikcije u delovima da ne trosimo previse memorije
         predictions = []
 
-        # prolazimo kroz upitne podatke u delovima
+        # prolazimo kroz upitne podatke u batch-evima i trazimo k najblizih suseda
         for start in range(0, Xq.shape[0], batch_size):
             end = start + batch_size
             batch = Xq[start:end]
 
+            # meri udaljenost izmedju upitnih primera i svih trening primera
             dists = th.cdist(batch, self.X)
             dists_k, idxs = th.topk(dists, self.k, largest=False)
             classes = self.Y[idxs]
@@ -73,7 +75,6 @@ all_y = np.loadtxt(
 
 all_x[all_x == ''] = 'nan'
 x_data = all_x.astype(np.float32)
-
 y_data = (all_y == 'True').astype(np.int64)
 
 data = dict()
@@ -117,9 +118,10 @@ nb_classes = 2
 k = 15
 
 knn = KNN(nb_features, nb_classes, train_data, k, weighted=False)
-test_predictions, accuracy = knn.predict(test_data)
+_, accuracy = knn.predict(test_data)
 
 print(f'Test set accuracy for k={k}: {accuracy:.5f}')
+
 
 x_min, x_max = train_x[:, 0].min() - 0.5, train_x[:, 0].max() + 0.5
 y_min, y_max = train_x[:, 1].min() - 0.5, train_x[:, 1].max() + 0.5

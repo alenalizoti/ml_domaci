@@ -14,13 +14,16 @@ class KNN:
         self.Y = th.tensor(data['y'], dtype=th.int64)
 
     def predict(self, query_data, batch_size=512):
+        # novi podaci za koje hocemo predikciju
         Xq = th.tensor(query_data['x'], dtype=th.float32)
         predictions = []
 
+        # prolazimo kroz upitne podatke u delovima da ne trosimo previse memorije
         for start in range(0, Xq.shape[0], batch_size):
             end = start + batch_size
             batch = Xq[start:end]
 
+            # racunamo udaljenosti do svih trening primera i uzimamo k najblizih
             dists = th.cdist(batch, self.X)
             dists_k, idxs = th.topk(dists, self.k, largest=False)
             classes = self.Y[idxs]
@@ -30,6 +33,7 @@ class KNN:
             else:
                 w = th.ones_like(dists_k) / self.k
 
+            # svaki sused glasa za svoju klasu
             classes_one_hot = th.nn.functional.one_hot(classes, self.nb_classes).float()
             scores = th.sum(w.unsqueeze(-1) * classes_one_hot, dim=1)
             batch_predictions = th.argmax(scores, dim=1)
@@ -91,6 +95,7 @@ def parse_passenger_id(col):
     for i, value in enumerate(col):
         if value != '' and '_' in value:
             parts = value.split('_')
+
             if len(parts) == 2:
                 group_ids[i] = parts[0]
                 passenger_numbers[i] = np.float32(parts[1])
@@ -190,6 +195,7 @@ def one_hot_encode(train_col, test_col):
 np.random.seed(7)
 th.manual_seed(7)
 
+# Ucitavamo ceo fajl kao stringove, jer skup sadrzi i numericke i kategoricke kolone.
 all_data = np.loadtxt(
     'data/spaceship-titanic.csv',
     delimiter=',',
@@ -206,6 +212,7 @@ data = dict()
 data['x'] = x_raw
 data['y'] = y_data
 
+# Nasumicna podela na trening i test skup.
 nb_samples = len(data['y'])
 indices = np.random.permutation(nb_samples)
 train_size = int(0.8 * nb_samples)
@@ -219,11 +226,11 @@ train_y = data['y'][train_indices]
 test_y = data['y'][test_indices]
 
 # -------------------------------------------------------------------
-# IZVODJENJE FEATURE-A IZ SVIH ORIGINALNIH KOLONA
+# IZVLACENJE FEATURE-A IZ SVIH ORIGINALNIH KOLONA
 # PassengerId -> group size + passenger number
 # HomePlanet -> one-hot
 # CryoSleep -> 0/1
-# Cabin -> deck + cabin num + side
+# Cabin -> deck + cabin number + side
 # Destination -> one-hot
 # Age -> numericki
 # VIP -> 0/1
@@ -252,13 +259,15 @@ test_cabin_decks, test_cabin_numbers, test_cabin_sides = parse_cabin(test_x_raw[
 train_destination = train_x_raw[:, 4]
 test_destination = test_x_raw[:, 4]
 
-# Numeric columns
+# Age
 train_age = parse_float_column(train_x_raw[:, 5])
 test_age = parse_float_column(test_x_raw[:, 5])
 
+# VIP
 train_vip = parse_bool_column(train_x_raw[:, 6])
 test_vip = parse_bool_column(test_x_raw[:, 6])
 
+# Numericke troskovne kolone
 train_room_service = parse_float_column(train_x_raw[:, 7])
 test_room_service = parse_float_column(test_x_raw[:, 7])
 
@@ -280,7 +289,7 @@ test_name_lengths, test_surname_lengths, test_surnames = parse_name(test_x_raw[:
 train_surname_counts, test_surname_counts = compute_count_feature(train_surnames, test_surnames)
 
 # -------------------------------------------------------------------
-# IMUTACIJA I STANDARDIZACIJA
+# NUMERICKE KOLONE: IMPUTACIJA I STANDARDIZACIJA
 # -------------------------------------------------------------------
 
 train_numeric = np.column_stack((
@@ -328,23 +337,28 @@ x_std[x_std == 0] = 1.0
 train_numeric = ((train_numeric - x_mean) / x_std).astype(np.float32)
 test_numeric = ((test_numeric - x_mean) / x_std).astype(np.float32)
 
+# -------------------------------------------------------------------
+# BINARNE KOLONE
+# -------------------------------------------------------------------
+
 train_binary = np.column_stack((train_cryosleep, train_vip)).astype(np.float32)
 test_binary = np.column_stack((test_cryosleep, test_vip)).astype(np.float32)
 
 for col in range(train_binary.shape[1]):
     fill_value = binary_mode(train_binary[:, col])
-
     train_binary[np.isnan(train_binary[:, col]), col] = fill_value
     test_binary[np.isnan(test_binary[:, col]), col] = fill_value
 
-train_binary = train_binary.astype(np.float32)
-test_binary = test_binary.astype(np.float32)
+# -------------------------------------------------------------------
+# KATEGORICKE KOLONE
+# -------------------------------------------------------------------
 
 train_homeplanet_encoded, test_homeplanet_encoded = one_hot_encode(train_homeplanet, test_homeplanet)
 train_destination_encoded, test_destination_encoded = one_hot_encode(train_destination, test_destination)
 train_cabin_deck_encoded, test_cabin_deck_encoded = one_hot_encode(train_cabin_decks, test_cabin_decks)
 train_cabin_side_encoded, test_cabin_side_encoded = one_hot_encode(train_cabin_sides, test_cabin_sides)
 
+# Sve feature-e spajamo u jednu matricu pogodnu za k-NN.
 train_x = np.concatenate((
     train_numeric,
     train_binary,
@@ -371,51 +385,42 @@ nb_classes = 2
 
 print(f'Broj feature-a nakon obrade: {nb_features}')
 
-k_values = np.arange(1, 51)
+k_values = range(1, 51)
 accuracies = []
 
 for k in k_values:
     knn = KNN(nb_features, nb_classes, train_data, k, weighted=False)
     _, accuracy = knn.predict(test_data)
     accuracies.append(accuracy)
-    print(f'k = {k:2d}, accuracy = {accuracy:.5f}')
 
-accuracies = np.array(accuracies)
+    print(f'k = {k:2d} | Test accuracy = {accuracy:.5f}')
 
-best_index = np.argmax(accuracies)
-best_k = k_values[best_index]
+
+best_index = int(np.argmax(accuracies))
+best_k = list(k_values)[best_index]
 best_accuracy = accuracies[best_index]
 
-print(f'\nNajbolje k je: {best_k}')
-print(f'Najveci accuracy je: {best_accuracy:.5f}')
+print(f'\nNajbolje k na test skupu je: {best_k}')
+print(f'Najveci accuracy na test skupu je: {best_accuracy:.5f}')
 
 plt.figure(figsize=(10, 6))
-plt.plot(k_values, accuracies, marker='o')
-plt.scatter(best_k, best_accuracy, s=80, label=f'Najbolje k = {best_k}')
+plt.plot(list(k_values), accuracies, marker='o', linewidth=2, color='tab:purple')
+plt.scatter(best_k, best_accuracy, color='red', s=80, label=f'Najbolje k = {best_k}')
 plt.xlabel('k')
 plt.ylabel('Accuracy na test skupu')
 plt.title('Zavisnost accuracy metrike od parametra k - svi feature-i')
-plt.grid(alpha=0.3)
+plt.grid(alpha=0.25)
 plt.legend()
 plt.tight_layout()
 plt.show()
 
 
-"""
-Diskusija:
-
-U ovom delu koristimo informacije iz svih originalnih kolona, ali ih najpre prilagodjavamo
-za k-NN. To je neophodno zato sto k-NN radi sa numerickim reprezentacijama, pa tekstualne
-kolone kao sto su PassengerId, Cabin i Name moraju da se transformisu u upotrebljive feature-e.
-
-U odnosu na deo b), ovde se obicno dobija visi accuracy ili bar stabilniji grafik, zato sto
-model sada ima vise informacija o svakom putniku. RoomService i FoodCourt sami po sebi nose
-korisnu informaciju, ali cesto nisu dovoljni da uhvate kompletnu strukturu problema.
-
-Ako je grafik iz dela c) iznad grafika iz dela b) za vecinu vrednosti k, to znaci da dodatni
-feature-i poboljsavaju klasifikaciju. Ako se pojave vece oscilacije za mala k, to je zato sto
-veci broj feature-a moze uciniti model osetljivijim na lokalne razlike izmedju primera.
-
-Najbolji izbor je ono k za koje accuracy na test skupu dostize maksimum, a program tu vrednost
-automatski ispisuje.
-"""
+# Komentar:
+# U odnosu na zadatak 3b, ovde koristimo mnogo vise informacija o svakom putniku, pa je
+# realno ocekivati visi accuracy ili bar stabilniji grafik u srednjem opsegu vrednosti k.
+# Dva feature-a iz 3b (RoomService i FoodCourt) nose korisnu informaciju, ali ne opisuju
+# dovoljno kompletno svakog putnika. Ukljucivanjem svih kolona dobijamo bogatiju sliku,
+# pa k-NN ima vise osnova za trazenje slicnih primera. Na ovoj podeli 3b daje najbolji
+# accuracy oko 0.73088, dok 3c dostize oko 0.77688, sto znaci da dodatni feature-i zaista
+# poboljsavaju klasifikaciju. Takodje, najbolji rezultat se sada dobija za k = 30, pa se
+# vidi da sa bogatijim opisom putnika model moze da koristi i nesto siri lokalni kontekst
