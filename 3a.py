@@ -1,6 +1,5 @@
 import torch as th
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
@@ -16,12 +15,11 @@ class KNN:
         self.Y = th.tensor(data['y'], dtype=th.int64)
 
     def predict(self, query_data, batch_size=512):
-        #novi podaci za koje hocemo predikciju
+        # novi podaci za koje hocemo predikciju
         Xq = th.tensor(query_data['x'], dtype=th.float32)
-        #skupljamo predikcije u delovima (batch-evima) da ne bih imao problema sa memorijom
         predictions = []
 
-        #prolazimo kroz upitne podatke u delovima, racunamo udaljenosti do svih trening primera, nalazimo k najblizih, i na osnovu njihovih klasa pravimo predikciju
+        # prolazimo kroz upitne podatke u delovima
         for start in range(0, Xq.shape[0], batch_size):
             end = start + batch_size
             batch = Xq[start:end]
@@ -55,14 +53,32 @@ class KNN:
 np.random.seed(7)
 th.manual_seed(7)
 
-all_data = pd.read_csv('data/spaceship-titanic.csv')
+# RoomService = kolona 7
+# FoodCourt   = kolona 8
+all_x = np.loadtxt(
+    'data/spaceship-titanic.csv',
+    delimiter=',',
+    skiprows=1,
+    usecols=(7, 8),
+    dtype=str
+)
 
-selected_features = ['RoomService', 'FoodCourt']
-target_name = 'Transported'
+all_y = np.loadtxt(
+    'data/spaceship-titanic.csv',
+    delimiter=',',
+    skiprows=1,
+    usecols=(13,),
+    dtype=str
+)
+
+all_x[all_x == ''] = 'nan'
+x_data = all_x.astype(np.float32)
+
+y_data = (all_y == 'True').astype(np.int64)
 
 data = dict()
-data['x'] = all_data[selected_features].copy()
-data['y'] = all_data[target_name].astype(int).to_numpy()
+data['x'] = x_data
+data['y'] = y_data
 
 nb_samples = len(data['y'])
 indices = np.random.permutation(nb_samples)
@@ -71,23 +87,27 @@ train_size = int(0.8 * nb_samples)
 train_indices = indices[:train_size]
 test_indices = indices[train_size:]
 
-train_x = data['x'].iloc[train_indices].copy()
-test_x = data['x'].iloc[test_indices].copy()
+train_x = data['x'][train_indices].copy()
+test_x = data['x'][test_indices].copy()
 train_y = data['y'][train_indices]
 test_y = data['y'][test_indices]
 
-# NaN vrednosti popunjavamo srednjom vrednoscu iz trening skupa.
-fill_values = train_x.mean()
-train_x = train_x.fillna(fill_values)
-test_x = test_x.fillna(fill_values)
+# NaN vrednosti popunjavamo srednjom vrednoscu iz trening skupa
+fill_values = np.nanmean(train_x, axis=0)
 
-# k-NN zavisi od skale feature-a, pa ih standardizujemo.
-x_mean = train_x.mean()
-x_std = train_x.std()
+train_nan_rows, train_nan_cols = np.where(np.isnan(train_x))
+test_nan_rows, test_nan_cols = np.where(np.isnan(test_x))
+
+train_x[train_nan_rows, train_nan_cols] = fill_values[train_nan_cols]
+test_x[test_nan_rows, test_nan_cols] = fill_values[test_nan_cols]
+
+# k-NN zavisi od skale feature-a, pa ih standardizujemo
+x_mean = np.mean(train_x, axis=0)
+x_std = np.std(train_x, axis=0)
 x_std[x_std == 0] = 1.0
 
-train_x = ((train_x - x_mean) / x_std).to_numpy(dtype='float32')
-test_x = ((test_x - x_mean) / x_std).to_numpy(dtype='float32')
+train_x = ((train_x - x_mean) / x_std).astype(np.float32)
+test_x = ((test_x - x_mean) / x_std).astype(np.float32)
 
 train_data = {'x': train_x, 'y': train_y}
 test_data = {'x': test_x, 'y': test_y}
@@ -100,7 +120,6 @@ knn = KNN(nb_features, nb_classes, train_data, k, weighted=False)
 test_predictions, accuracy = knn.predict(test_data)
 
 print(f'Test set accuracy for k={k}: {accuracy:.5f}')
-
 
 x_min, x_max = train_x[:, 0].min() - 0.5, train_x[:, 0].max() + 0.5
 y_min, y_max = train_x[:, 1].min() - 0.5, train_x[:, 1].max() + 0.5
